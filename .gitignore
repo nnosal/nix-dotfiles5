@@ -1,0 +1,37 @@
+# Nix build outputs
+result
+result-*
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+
+# Local overrides (ne jamais commit)
+*.local.toml
+*.local.nix
+
+# Editor
+.idea/
+.vscode/
+*.code-workspace
+
+# Secrets (au cas où)
+*.age
+*.sops.yaml
+secrets/
+
+# Logs
+*.log
+
+# Node (si présent dans stow/)
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Backup files
+*~
+*.bak

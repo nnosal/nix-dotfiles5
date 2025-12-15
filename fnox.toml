@@ -1,0 +1,32 @@
+# Configuration Globale
+# Si un secret manque, Fnox ne doit pas faire planter le shell, juste avertir.
+error_mode = "warn"
+
+[secrets]
+# --- API KEYS (Dev) ---
+# Format: VAR_ENV = "provider://nom_clé"
+
+# Sur Mac, ça cherche dans le Keychain "login"
+# Sur Linux, ça cherche dans le Secret Service (Gnome Keyring / KWallet) ou Pass
+
+# OpenAI
+OPENAI_API_KEY = "keychain://openai_api_key"
+
+# Anthropic (Claude)
+ANTHROPIC_API_KEY = "keychain://anthropic_api_key"
+
+# Google (Gemini)
+GEMINI_API_KEY = "keychain://gemini_api_key"
+GOOGLE_AI_API_KEY = "keychain://google_ai_api_key"
+
+# GitHub
+GITHUB_TOKEN = "keychain://github_token"
+GH_TOKEN = "keychain://github_token"
+
+# --- INFRASTRUCTURE ---
+# Token pour que Terraform puisse parler à Cloudflare
+CLOUDFLARE_API_TOKEN = "keychain://cloudflare_token"
+
+# --- BACKUPS ---
+# Mot de passe du repo Restic (Backup)
+RESTIC_PASSWORD = "keychain://restic_backup_pw"

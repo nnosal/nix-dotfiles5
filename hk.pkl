@@ -1,0 +1,35 @@
+// hk.pkl - Git Hooks Configuration
+// Utilise Hk (Rust) pour la qualité du code
+
+amends "package://github.com/jdx/hk/releases/download/v1.27.0/hk@1.27.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.27.0/hk@1.27.0#/Builtins.pkl"
+
+local linters = new Mapping<String, Step> {
+    // Formatteur Nix
+    ["nixfmt"] {
+        glob = List("**.nix")
+        check = "nixfmt --check {{files}}"
+        fix = "nixfmt {{files}}"
+    }
+    // Formatteur Shell
+    ["shfmt"] {
+        glob = List("**.sh")
+        check = "shfmt -d {{files}}"
+        fix = "shfmt -w {{files}}"
+    }
+    // Formatteur Lua (Neovim configs)
+    ["stylua"] {
+        glob = List("**.lua")
+        check = "stylua --check {{files}}"
+        fix = "stylua {{files}}"
+    }
+    // 🛑 ARRET D'URGENCE si une clé privée est détectée
+    ["detect-private-key"] = Builtins.detect_private_key
+}
+
+hooks {
+    ["pre-commit"] {
+        fix = true
+        steps { ...linters }
+    }
+}

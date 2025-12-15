@@ -1,0 +1,78 @@
+[meta]
+name = "ultimate-dotfiles"
+
+[tools]
+# Outils indispensables au Cockpit
+gum = "latest"      # UI Interactif
+fzf = "latest"      # Recherche floue
+bat = "latest"      # Cat avec syntax highlight
+hk = "latest"       # Git Hooks manager
+pkl = "latest"      # Config language pour hk
+nh = "latest"       # Nix Helper (Speed up builds & GC)
+stylua = "latest"   # Formatter Lua (Neovim)
+shfmt = "latest"    # Formatter Bash
+starship = "latest" # Prompt moderne
+
+[tasks.install]
+description = "Bootstrap initial post-clone"
+run = """
+#!/usr/bin/env bash
+set -e
+# 1. Installe les hooks git
+hk install
+# 2. Applique la config Nix initiale
+./scripts/cockpit.sh --apply-only
+"""
+
+[tasks.ui]
+description = "🖥️  Ouvre le Cockpit Principal"
+alias = "cockpit"
+run = "./scripts/cockpit.sh"
+
+[tasks.switch]
+description = "🔄 Applique la config Nix (Rebuild)"
+run = "nh os switch ." # nh détecte auto si c'est Darwin ou NixOS
+
+[tasks.stow]
+description = "🔗 Applique les dotfiles (Symlinks)"
+run = "./scripts/stow-apply.sh"
+
+[tasks.save]
+description = "☁️  Snapshot : Git Add + Commit + Push"
+run = """
+#!/usr/bin/env bash
+set -e
+git add .
+MSG=$(gum input --placeholder "Message de commit...")
+git commit -m "$MSG"
+git push
+"""
+
+[tasks.gc]
+description = "🧹 Nettoyage du Store Nix"
+run = "nh clean all --keep 3" # Garde les 3 dernières générations
+
+[tasks.update]
+description = "⬆️  Met à jour les inputs Flake + Switch"
+run = """
+#!/usr/bin/env bash
+set -e
+nix flake update
+nh os switch .
+"""
+
+[tasks.edit]
+description = "✏️  Édite une config (fuzzy finder)"
+run = "./scripts/wizards/edit.sh"
+
+[tasks.add]
+description = "➕ Ajoute une app/host/user"
+run = "./scripts/wizards/add-app.sh"
+
+[tasks.secret]
+description = "🔒 Gère les secrets Fnox"
+run = "./scripts/wizards/secret.sh"
+
+[tasks.test-mac]
+description = "🧪 Lance une VM Tart et teste l'installation complète"
+run = "./scripts/ci/test-darwin.sh"
