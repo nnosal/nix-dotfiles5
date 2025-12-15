@@ -1,0 +1,131 @@
+# ~/.config/starship.toml
+# Configuration Starship Prompt
+
+# Format global du prompt
+format = """
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_status\
+$nix_shell\
+$python\
+$nodejs\
+$rust\
+$golang\
+$docker_context\
+$kubernetes\
+$aws\
+$cmd_duration\
+$line_break\
+$character"""
+
+# Attendre 10ms max pour une commande
+command_timeout = 500
+
+# Ajouter une ligne vide avant le prompt
+add_newline = true
+
+# Caractère du prompt
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vicmd_symbol = "[❮](bold green)"
+
+# Répertoire
+[directory]
+truncation_length = 4
+truncate_to_repo = true
+format = "[$path]($style)[$read_only]($read_only_style) "
+style = "bold cyan"
+read_only = " 🔒"
+
+# Git branch
+[git_branch]
+format = "on [$symbol$branch]($style) "
+symbol = " "
+style = "bold purple"
+
+# Git status
+[git_status]
+format = "[\($all_status$ahead_behind\)]($style) "
+style = "bold red"
+conflicted = "🟠"
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+untracked = "?"
+stashed = "📦"
+modified = "!"
+staged = "+${count}"
+renamed = "»"
+deleted = "✗"
+
+# Nix shell
+[nix_shell]
+format = "via [$symbol$state]($style) "
+symbol = "❄️ "
+style = "bold blue"
+
+# Durée de la commande
+[cmd_duration]
+min_time = 2_000
+format = "took [$duration]($style) "
+style = "bold yellow"
+
+# Username (uniquement si SSH ou root)
+[username]
+format = "[$user]($style)@"
+style_user = "bold white"
+style_root = "bold red"
+show_always = false
+
+# Hostname (uniquement si SSH)
+[hostname]
+format = "[$hostname]($style) in "
+style = "bold white"
+ssh_only = true
+
+# Python
+[python]
+format = "via [$symbol$pyenv_prefix($version)]($style) "
+symbol = "🐍 "
+style = "bold yellow"
+
+# Node.js
+[nodejs]
+format = "via [$symbol($version)]($style) "
+symbol = "⬢ "
+style = "bold green"
+
+# Rust
+[rust]
+format = "via [$symbol($version)]($style) "
+symbol = "🦀 "
+style = "bold red"
+
+# Go
+[golang]
+format = "via [$symbol($version)]($style) "
+symbol = "🐹 "
+style = "bold cyan"
+
+# Docker
+[docker_context]
+format = "via [$symbol$context]($style) "
+symbol = "🐳 "
+style = "bold blue"
+
+# Kubernetes
+[kubernetes]
+format = "on [$symbol$context( \($namespace\))]($style) "
+symbol = "☸️ "
+style = "bold blue"
+disabled = false
+
+# AWS
+[aws]
+format = "on [$symbol($profile)(\($region\))]($style) "
+symbol = "☁️ "
+style = "bold yellow"
+disabled = false
