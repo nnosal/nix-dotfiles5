@@ -13,7 +13,11 @@
     # 🛡️ Injection des Secrets (Fnox) & SSH
     initExtra = ''
       # 1. Activer Fnox (Secrets en ENV)
-      if command -v fnox &> /dev/null; then
+      # On ne lance Fnox que si on est dans une session interactive
+      # pour ne pas ralentir les scripts non-interactifs
+      if [[ -o interactive ]] && command -v fnox &> /dev/null; then
+        # "activate" génère les commandes 'export VAR=...'
+        # Les secrets transitent par un pipe sécurisé, jamais écrits sur disque
         eval "$(fnox activate zsh)"
       fi
 
