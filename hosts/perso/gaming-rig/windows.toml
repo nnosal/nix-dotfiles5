@@ -1,0 +1,61 @@
+# hosts/perso/gaming-rig/windows.toml
+# Configuration Mise pour Windows NATIF (pas WSL)
+# Gère les apps graphiques via Winget
+
+[env]
+# Variables d'environnement Windows globales
+EDITOR = "code --wait"
+
+[tools]
+# Runtimes pour le dev Windows natif
+python = "latest"
+node = "lts"
+go = "latest"
+
+# 📦 WINGET (Applications Graphiques)
+# Mise supporte l'installation Winget nativement
+
+# Développement
+"winget:Microsoft.VisualStudioCode" = "latest"
+"winget:Docker.DockerDesktop" = "latest"
+"winget:Git.Git" = "latest"
+"winget:Microsoft.WindowsTerminal" = "latest"
+"winget:Microsoft.PowerShell" = "latest"
+
+# Gaming
+"winget:Valve.Steam" = "latest"
+"winget:Blizzard.BattleNet" = "latest"
+"winget:EpicGames.EpicGamesLauncher" = "latest"
+"winget:Discord.Discord" = "latest"
+
+# Navigateurs
+"winget:Google.Chrome" = "latest"
+"winget:Mozilla.Firefox" = "latest"
+
+# Communication
+"winget:Zoom.Zoom" = "latest"
+"winget:SlackTechnologies.Slack" = "latest"
+
+# Utilitaires
+"winget:7zip.7zip" = "latest"
+"winget:VideoLAN.VLC" = "latest"
+"winget:Spotify.Spotify" = "latest"
+"winget:AgileBits.1Password" = "latest"
+
+# Fonts
+"winget:JetBrains.Mono" = "latest"
+
+[tasks.update]
+description = "Met à jour toutes les apps Windows"
+run = "winget upgrade --all --include-unknown"
+
+[tasks.install-fonts]
+description = "Installe les Nerd Fonts"
+run = "winget install --id=Delugia.DelugiaNerdFont -e --source winget"
+
+[tasks.setup-wsl]
+description = "Configure WSL avec Ubuntu"
+run = """
+wsl --install -d Ubuntu
+wsl --set-default-version 2
+"""
