@@ -1,0 +1,105 @@
+# .github/workflows/ci.yml
+# CI/CD pour Ultimate Dotfiles
+# Vérifie la syntaxe Nix et teste le build sur chaque push/PR
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ============================================
+  # VÉRIFICATION SYNTAXE FLAKE
+  # ============================================
+  check-flake:
+    name: 🔍 Check Flake Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Check Flake
+        run: nix flake check --no-build
+
+  # ============================================
+  # BUILD LINUX (DRY RUN)
+  # ============================================
+  build-linux:
+    name: 🐧 Build Linux (Dry Run)
+    runs-on: ubuntu-latest
+    needs: check-flake
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Dry Run Build (agent-test)
+        run: |
+          nix build .#nixosConfigurations.agent-test.config.system.build.toplevel --dry-run
+
+  # ============================================
+  # LINTING
+  # ============================================
+  lint:
+    name: 🧹 Lint Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Check Nix formatting
+        run: |
+          nix shell nixpkgs#nixfmt-rfc-style -c find . -name '*.nix' -exec nixfmt --check {} +
+        continue-on-error: true
+
+      - name: Check Shell scripts
+        run: |
+          nix shell nixpkgs#shellcheck -c find . -name '*.sh' -exec shellcheck {} +
+        continue-on-error: true
+
+  # ============================================
+  # SÉCURITÉ: DÉTECTION DE SECRETS
+  # ============================================
+  security:
+    name: 🔒 Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for secrets
+        run: |
+          # Vérifier qu'aucune clé privée n'est présente
+          if grep -r "PRIVATE KEY" --include="*.nix" --include="*.sh" --include="*.toml" .; then
+            echo "::error::Private key detected in repository!"
+            exit 1
+          fi
+          
+          # Vérifier qu'aucun fichier .age ou .sops n'existe
+          if find . -name "*.age" -o -name ".sops.yaml" | grep -q .; then
+            echo "::error::Encrypted secrets files detected! Use fnox instead."
+            exit 1
+          fi
+          
+          echo "✅ No secrets detected"
