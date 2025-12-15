@@ -1,7 +1,11 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # bootstrap.sh
 # Script d'installation "Zero-Install" pour macOS et Linux
-# Usage: sh <(curl -L https://raw.githubusercontent.com/nnosal/nix-dotfiles5/main/bootstrap.sh)
+# Usage: curl -fsSL https://raw.githubusercontent.com/nnosal/nix-dotfiles5/main/bootstrap.sh | sh
+# Ou:    sh -c "$(curl -fsSL https://raw.githubusercontent.com/nnosal/nix-dotfiles5/main/bootstrap.sh)"
+#
+# Ce script est POSIX-compatible (sh) pour fonctionner partout
+
 set -e
 
 # ============================================
@@ -10,25 +14,21 @@ set -e
 REPO_URL="https://github.com/nnosal/nix-dotfiles5.git"
 DOTFILES_DIR="$HOME/dotfiles"
 
-# Couleurs
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
-success() { echo -e "${GREEN}✅ $1${NC}"; }
-warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
-error() { echo -e "${RED}❌ $1${NC}"; }
+# ============================================
+# FONCTIONS (POSIX compatible)
+# ============================================
+info() { printf '\033[0;34mℹ️  %s\033[0m\n' "$1"; }
+success() { printf '\033[0;32m✅ %s\033[0m\n' "$1"; }
+warning() { printf '\033[0;33m⚠️  %s\033[0m\n' "$1"; }
+error() { printf '\033[0;31m❌ %s\033[0m\n' "$1"; }
 
 # ============================================
-# DÉTECTION OS
+# DÉTECTION OS (POSIX compatible)
 # ============================================
 detect_os() {
-    case "$OSTYPE" in
-        darwin*)  echo "darwin" ;;
-        linux*)   
+    case "$(uname -s)" in
+        Darwin*)  echo "darwin" ;;
+        Linux*)   
             if grep -q Microsoft /proc/version 2>/dev/null; then
                 echo "wsl"
             else
@@ -46,24 +46,29 @@ info "Système détecté: $OS"
 # BANNIÈRE
 # ============================================
 echo ""
-echo -e "${GREEN}======================================${NC}"
-echo -e "${GREEN}  🚀 ULTIMATE DOTFILES BOOTSTRAP${NC}"
-echo -e "${GREEN}======================================${NC}"
+printf '\033[0;32m======================================\033[0m\n'
+printf '\033[0;32m  🚀 ULTIMATE DOTFILES BOOTSTRAP\033[0m\n'
+printf '\033[0;32m======================================\033[0m\n'
 echo ""
 
 # ============================================
 # INSTALLATION DE NIX
 # ============================================
-if ! command -v nix &> /dev/null; then
+if ! command -v nix >/dev/null 2>&1; then
     info "Installation de Nix..."
     
-    if [[ "$OS" == "darwin" ]]; then
+    # Télécharger et exécuter l'installeur Nix
+    curl -L https://nixos.org/nix/install -o /tmp/nix-install.sh
+    
+    if [ "$OS" = "darwin" ]; then
         # macOS: Nix daemon multi-user
-        sh <(curl -L https://nixos.org/nix/install)
+        sh /tmp/nix-install.sh
     else
         # Linux: Nix daemon
-        sh <(curl -L https://nixos.org/nix/install) --daemon
+        sh /tmp/nix-install.sh --daemon
     fi
+    
+    rm -f /tmp/nix-install.sh
     
     # Sourcer Nix pour cette session
     if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
@@ -78,7 +83,7 @@ fi
 # ============================================
 # MODE CI (NON-INTERACTIF)
 # ============================================
-if [[ "$CI" == "true" ]]; then
+if [ "$CI" = "true" ]; then
     info "Mode CI détecté: Installation non-interactive"
     
     # Cloner directement
@@ -89,7 +94,7 @@ if [[ "$CI" == "true" ]]; then
     cd "$DOTFILES_DIR"
     
     # Installer mise
-    if ! command -v mise &> /dev/null; then
+    if ! command -v mise >/dev/null 2>&1; then
         curl https://mise.run | sh
         export PATH="$HOME/.local/bin:$PATH"
     fi
@@ -103,90 +108,86 @@ if [[ "$CI" == "true" ]]; then
 fi
 
 # ============================================
-# SHELL ÉPHÉMÈRE AVEC GUM
+# INSTALLATION INTERACTIVE
 # ============================================
-info "Lancement du shell éphémère avec Git et Gum..."
+info "Lancement de l'installation interactive..."
 
-# Créer un script temporaire pour l'installation interactive
-TEMP_SCRIPT=$(mktemp)
-cat > "$TEMP_SCRIPT" << 'EPHEMERAL'
-#!/usr/bin/env bash
-set -e
-
-REPO_URL="https://github.com/nnosal/nix-dotfiles5.git"
-DEFAULT_DIR="$HOME/dotfiles"
-
-# Bannière Gum
-gum style \
-    --border double \
-    --margin "1" \
-    --padding "1 2" \
-    --border-foreground 212 \
-    "🚀 Ultimate Dotfiles Installer"
-
-# Confirmer l'installation
-if ! gum confirm "Installer les dotfiles ?"; then
-    echo "❌ Installation annulée"
-    exit 0
-fi
-
-# Demander le chemin
-DOTFILES_DIR=$(gum input \
-    --placeholder "Chemin d'installation" \
-    --value "$DEFAULT_DIR")
-
-# Cloner
-if [ -d "$DOTFILES_DIR" ]; then
-    gum style --foreground 226 "⚠️ Le dossier existe déjà"
-    if gum confirm "Mettre à jour (git pull) ?"; then
-        cd "$DOTFILES_DIR"
-        git pull
-    fi
+# Vérifier si git est disponible
+if ! command -v git >/dev/null 2>&1; then
+    info "Git non trouvé, installation via Nix..."
+    # Utiliser nix-shell pour avoir git temporairement
+    nix-shell -p git --run "git clone $REPO_URL $DOTFILES_DIR"
 else
-    gum spin --spinner dot --title "Clonage du repo..." -- \
+    # Cloner ou mettre à jour
+    if [ -d "$DOTFILES_DIR" ]; then
+        warning "Le dossier $DOTFILES_DIR existe déjà"
+        printf "Mettre à jour (git pull) ? [y/N] "
+        read -r REPLY
+        if [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ]; then
+            cd "$DOTFILES_DIR"
+            git pull
+        fi
+    else
+        info "Clonage du repo..."
         git clone "$REPO_URL" "$DOTFILES_DIR"
+    fi
 fi
 
 cd "$DOTFILES_DIR"
 
-# Installer Mise
-if ! command -v mise &> /dev/null; then
-    gum spin --spinner dot --title "Installation de Mise..." -- \
-        bash -c 'curl -fsSL https://mise.run | sh'
+# ============================================
+# INSTALLER MISE
+# ============================================
+if ! command -v mise >/dev/null 2>&1; then
+    info "Installation de Mise..."
+    curl -fsSL https://mise.run | sh
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
-# Setup
-gum spin --spinner dot --title "Installation des outils (Mise)..." -- \
-    mise install
+success "Mise installé"
 
-# Choisir le profil
-PROFIL=$(gum choose "work" "personal" "none" --header "Quel profil appliquer ?")
-export MACHINE_CONTEXT="$PROFIL"
+# ============================================
+# INSTALLER LES OUTILS VIA MISE
+# ============================================
+info "Installation des outils (gum, hk, nh, etc.)..."
+mise install
 
-# Appliquer
-gum style --foreground 212 "🛠️ Application de la configuration..."
-./scripts/cockpit.sh --apply-only
+# ============================================
+# CHOIX DU PROFIL (si gum disponible)
+# ============================================
+if command -v gum >/dev/null 2>&1; then
+    # Mode interactif avec Gum
+    gum style \
+        --border double \
+        --margin "1" \
+        --padding "1 2" \
+        --border-foreground 212 \
+        "🎮 Configuration Ultimate Dotfiles"
+    
+    PROFIL=$(gum choose "work" "personal" "none" --header "Quel profil Stow appliquer ?")
+    export MACHINE_CONTEXT="$PROFIL"
+    
+    # Appliquer
+    info "Application de la configuration..."
+    ./scripts/cockpit.sh --apply-only
+else
+    # Mode texte basique
+    printf "Quel profil appliquer ? (work/personal/none) [none]: "
+    read -r PROFIL
+    PROFIL="${PROFIL:-none}"
+    export MACHINE_CONTEXT="$PROFIL"
+    
+    info "Application de la configuration..."
+    ./scripts/cockpit.sh --apply-only
+fi
 
-gum style --foreground 46 "
-✅ Installation terminée !
-
-Lancez un nouveau terminal ou:
-  source ~/.zshrc
-
-Pour accéder au Cockpit:
-  cockpit
-  # ou
-  mise run ui
-"
-EPHEMERAL
-
-chmod +x "$TEMP_SCRIPT"
-
-# Exécuter dans un shell éphémère avec Git et Gum
-nix shell nixpkgs#git nixpkgs#gum --command bash "$TEMP_SCRIPT"
-
-# Cleanup
-rm -f "$TEMP_SCRIPT"
-
-success "Bootstrap terminé !"
+# ============================================
+# FIN
+# ============================================
+echo ""
+success "Installation terminée !"
+echo ""
+printf '\033[0;36mProchaines étapes:\033[0m\n'
+echo "  1. Ouvrez un nouveau terminal ou: source ~/.zshrc"
+echo "  2. Lancez le Cockpit: cockpit (ou mise run ui)"
+echo ""
