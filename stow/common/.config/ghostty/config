@@ -1,0 +1,74 @@
+# ~/.config/ghostty/config
+# Configuration Ghostty Terminal
+# Géré par GNU Stow
+
+# ============================================
+# FONT
+# ============================================
+font-family = "JetBrainsMono Nerd Font"
+font-size = 14
+font-thicken = true
+
+# ============================================
+# WINDOW
+# ============================================
+window-padding-x = 10
+window-padding-y = 10
+window-decoration = true
+window-theme = auto
+
+# macOS specific
+macos-titlebar-style = tabs
+macos-option-as-alt = true
+
+# ============================================
+# APPEARANCE
+# ============================================
+# Catppuccin Mocha (sera override par Stylix si activé)
+background = 1e1e2e
+foreground = cdd6f4
+
+# Cursor
+cursor-style = block
+cursor-style-blink = true
+
+# Selection
+selection-background = 45475a
+selection-foreground = cdd6f4
+
+# ============================================
+# BEHAVIOR
+# ============================================
+scrollback-limit = 10000
+mouse-hide-while-typing = true
+confirm-close-surface = false
+
+# Clipboard
+clipboard-read = allow
+clipboard-write = allow
+clipboard-paste-protection = false
+
+# ============================================
+# SHELL
+# ============================================
+# Ghostty utilise le shell par défaut ($SHELL)
+# command = /bin/zsh
+
+# ============================================
+# KEYBINDINGS
+# ============================================
+# Cmd+T = New Tab
+keybind = super+t=new_tab
+# Cmd+W = Close Tab
+keybind = super+w=close_surface
+# Cmd+Shift+[ / ] = Switch Tabs
+keybind = super+shift+left_bracket=goto_tab:-1
+keybind = super+shift+right_bracket=goto_tab:+1
+# Cmd+1-9 = Go to Tab
+keybind = super+1=goto_tab:1
+keybind = super+2=goto_tab:2
+keybind = super+3=goto_tab:3
+# Cmd+D = Split Right
+keybind = super+d=new_split:right
+# Cmd+Shift+D = Split Down
+keybind = super+shift+d=new_split:down

@@ -1,0 +1,28 @@
+# Force LF (Unix style) pour tous les fichiers textuels, même sur Windows
+* text=auto eol=lf
+
+# Fichiers spécifiques
+*.sh text eol=lf
+*.nix text eol=lf
+*.toml text eol=lf
+*.lua text eol=lf
+*.zsh text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Scripts PowerShell (peuvent rester CRLF pour Windows)
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Exceptions binaires
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pkl binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
