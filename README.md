@@ -49,6 +49,14 @@ sh <(curl -L https://raw.githubusercontent.com/nnosal/nix-dotfiles5/main/bootstr
 >
 > Le `task.install` dans `mise.toml` tentera automatiquement `nix profile install nixpkgs#nh` lors de `mise install` si Nix est présent, et affichera des instructions alternatives en cas d'échec.
 
+> ⚠️ Si `mise` se plaint que le fichier de config n'est pas *trusted* (erreur « Config files in ~/dotfiles/mise.toml are not trusted »), exécutez :
+>
+> ```bash
+> mise trust ~/dotfiles/mise.toml
+> ```
+>
+> Le bootstrap tente désormais d'ajouter l'activation de `mise` dans `~/.zshrc` et d'exécuter `mise trust` automatiquement pour éviter ce blocage. Si `mise` n'est toujours pas trouvable dans votre session, ouvrez un nouveau terminal ou exécutez `source ~/.zshrc`. 
+
 
 ### Windows
 

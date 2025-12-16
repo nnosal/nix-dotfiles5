@@ -98,9 +98,32 @@ if [ "$CI" = "true" ]; then
         curl https://mise.run | sh
         export PATH="$HOME/.local/bin:$PATH"
     fi
-    
+
+    # Faire confiance au fichier de config pour que 'mise install' puisse s'exécuter non interactif
+    if command -v mise >/dev/null 2>&1; then
+        info "Confiance du fichier de configuration mise.toml (CI)..."
+        mise trust "$DOTFILES_DIR/mise.toml" || true
+    fi
+
     # Setup
-    mise install
+    if ! mise install; then
+        warning "La commande 'mise install' a échoué en CI — exécutez 'mise install --verbose' pour plus de détails."
+    fi
+
+    # Si 'nh' est toujours absent, tenter une installation via Nix
+    if ! command -v nh >/dev/null 2>&1; then
+        if command -v nix >/dev/null 2>&1; then
+            info "nh introuvable (CI) — tentative d'installation via Nix (nix profile install nixpkgs#nh)..."
+            if nix profile install nixpkgs#nh; then
+                success "nh installé via Nix"
+            else
+                warning "Échec de l'installation de 'nh' via Nix. Vous pouvez utiliser 'nix shell nixpkgs#nh -c nh' en attendant."
+            fi
+        else
+            warning "nh introuvable et Nix absent en CI — installez 'nh' manuellement."
+        fi
+    fi
+
     ./scripts/cockpit.sh --apply-only
     
     success "Installation CI terminée !"
@@ -146,11 +169,49 @@ fi
 
 success "Mise installé"
 
+# Activer 'mise' pour le shell courant et persister dans le rc (zsh)
+SHELL_NAME="$(basename "$SHELL")"
+if [ "$SHELL_NAME" = "zsh" ]; then
+    if [ -f "$HOME/.zshrc" ] && ! grep -q "mise activate zsh" "$HOME/.zshrc" 2>/dev/null; then
+        echo 'eval "$($HOME/.local/bin/mise activate zsh)"' >> "$HOME/.zshrc"
+    fi
+    # Activer maintenant pour la session courante
+    eval "$($HOME/.local/bin/mise activate zsh)" || true
+else
+    # Fallback: écrire dans .zshrc si présent
+    if [ -f "$HOME/.zshrc" ] && ! grep -q "mise activate zsh" "$HOME/.zshrc" 2>/dev/null; then
+        echo 'eval "$($HOME/.local/bin/mise activate zsh)"' >> "$HOME/.zshrc"
+    fi
+    eval "$($HOME/.local/bin/mise activate zsh)" || true
+fi
+
+# Faire confiance au fichier de config pour que 'mise install' puisse s'exécuter non interactif
+if command -v mise >/dev/null 2>&1; then
+    info "Confiance du fichier de configuration mise.toml..."
+    mise trust "$DOTFILES_DIR/mise.toml" || true
+fi
+
 # ============================================
 # INSTALLER LES OUTILS VIA MISE
 # ============================================
-info "Installation des outils (gum, hk, nh, etc.)..."
-mise install
+info "Installation des outils (gum, hk, etc.)..."
+if ! mise install; then
+    warning "La commande 'mise install' a échoué — exécutez 'mise install --verbose' pour plus de détails."
+fi
+
+# Si 'nh' est toujours absent, tenter une installation via Nix
+if ! command -v nh >/dev/null 2>&1; then
+    if command -v nix >/dev/null 2>&1; then
+        info "nh introuvable — tentative d'installation via Nix (nix profile install nixpkgs#nh)..."
+        if nix profile install nixpkgs#nh; then
+            success "nh installé via Nix"
+        else
+            warning "Échec de l'installation de 'nh' via Nix. Vous pouvez utiliser 'nix shell nixpkgs#nh -c nh' en attendant."
+        fi
+    else
+        warning "nh introuvable et Nix absent — installez 'nh' manuellement (ex: 'nix shell nixpkgs#nh')."
+    fi
+fi
 
 # ============================================
 # CHOIX DU PROFIL (si gum disponible)
