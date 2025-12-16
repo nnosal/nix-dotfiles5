@@ -18,6 +18,20 @@ fi
 
 info "Vérification de l'environnement post-bootstrap..."
 
+# Détecter le shell et le fichier RC recommandé
+SHELL_NAME="$(basename "${SHELL:-sh}")"
+case "$SHELL_NAME" in
+  zsh)
+    RC_SUGGEST="~/.zshrc (ou ~/.zprofile pour les shells login)"
+    ;;
+  bash)
+    RC_SUGGEST="~/.bashrc (ou ~/.bash_profile pour les shells login)"
+    ;;
+  *)
+    RC_SUGGEST="votre fichier de démarrage (~/.profile, etc.)"
+    ;;
+esac
+
 # Mise
 if command -v mise >/dev/null 2>&1; then
   ver=$(mise --version 2>/dev/null || true)
@@ -49,7 +63,18 @@ if command -v mise >/dev/null 2>&1; then
     warning "Le fichier mise.toml n'est pas trusté — exécutez: mise trust ~/dotfiles/mise.toml (ou 'mise trust <chemin>')"
   fi
 else
-  warning "mise introuvable — installez avec: curl https://mise.run | sh, puis ouvrez un nouveau terminal ou 'source ~/.zshrc'"
+  # Si le binaire existe mais n'est pas dans le PATH, proposer des actions
+  if [ -x "$HOME/.local/bin/mise" ]; then
+    warning "Le binaire '~/.local/bin/mise' existe mais n'est pas dans le PATH."
+    info "Ajoutez ceci à votre fichier de démarrage ($RC_SUGGEST), puis ouvrez un nouveau terminal ou exécutez la commande d'activation pour la session courante :"
+    echo "  export PATH=\"\$HOME/.local/bin:\$HOME/.local/share/mise/shims:\$PATH\""
+    echo "  eval \"\$(\"$HOME/.local/bin/mise\" activate $SHELL_NAME)\""
+    info "Si vous préférez, vous pouvez tenter d'appeler directement le binaire pour installer les outils:"
+    echo "  $HOME/.local/bin/mise install --verbose"
+  else
+    warning "mise introuvable — installez avec: curl https://mise.run | sh"
+    info "Après l'installation, ouvrez un nouveau terminal ou sourcez votre fichier de démarrage: $RC_SUGGEST"
+  fi
 fi
 
 # NH

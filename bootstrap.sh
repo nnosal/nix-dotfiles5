@@ -183,20 +183,63 @@ export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
 success "Mise installé"
 
-# Activer 'mise' pour le shell courant et persister dans le rc (zsh)
-SHELL_NAME="$(basename "$SHELL")"
-if [ "$SHELL_NAME" = "zsh" ]; then
-    if [ -f "$HOME/.zshrc" ] && ! grep -q "mise activate zsh" "$HOME/.zshrc" 2>/dev/null; then
-        echo 'eval "$($HOME/.local/bin/mise activate zsh)"' >> "$HOME/.zshrc"
+# Détection du shell et persistance de l'activation de 'mise' dans le(s) fichier(s) de démarrage approprié(s)
+SHELL_NAME="$(basename "${SHELL:-sh}")"
+info "Shell utilisateur détecté: $SHELL_NAME"
+
+# Exports persistants et pour la session courante
+export_line='export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"'
+activate_line='eval "$("$HOME/.local/bin/mise" activate $SHELL_NAME 2>/dev/null)"'
+
+# Ajouter les lignes aux fichiers de démarrage appropriés (sans dupliquer)
+add_line_if_missing() {
+    file="$1"
+    line="$2"
+    if [ -f "$file" ]; then
+        if ! grep -qF "$line" "$file" 2>/dev/null; then
+            echo "" >> "$file"
+            echo "$line" >> "$file"
+            info "Ajouté à $file"
+        fi
+    else
+        # Créer le fichier et écrire la ligne
+        printf "%s\n" "$line" > "$file"
+        info "Fichier $file créé et mise en place"
     fi
-    # Activer maintenant pour la session courante
-    eval "$($HOME/.local/bin/mise activate zsh)" || true
-else
-    # Fallback: écrire dans .zshrc si présent
-    if [ -f "$HOME/.zshrc" ] && ! grep -q "mise activate zsh" "$HOME/.zshrc" 2>/dev/null; then
-        echo 'eval "$($HOME/.local/bin/mise activate zsh)"' >> "$HOME/.zshrc"
+}
+
+case "$SHELL_NAME" in
+    zsh)
+        add_line_if_missing "$HOME/.zprofile" "$export_line"
+        add_line_if_missing "$HOME/.zshrc" "$activate_line"
+        ;;
+    bash)
+        add_line_if_missing "$HOME/.bash_profile" "$export_line"
+        add_line_if_missing "$HOME/.bashrc" "$activate_line"
+        ;;
+    *)
+        # Generic fallback
+        add_line_if_missing "$HOME/.profile" "$export_line"
+        add_line_if_missing "$HOME/.profile" "$activate_line"
+        ;;
+esac
+
+# Tenter une activation immédiate dans la session courante — attendre que 'mise' soit réellement exécutable
+max_wait=30
+waited=0
+while [ "$waited" -lt "$max_wait" ]; do
+    if command -v "$HOME/.local/bin/mise" >/dev/null 2>&1 || command -v mise >/dev/null 2>&1; then
+        # Exécuter activation (silencieusement si possible)
+        if "$HOME/.local/bin/mise" activate "$SHELL_NAME" >/dev/null 2>&1; then
+            info "mise activé pour le shell $SHELL_NAME"
+            break
+        fi
     fi
-    eval "$($HOME/.local/bin/mise activate zsh)" || true
+    sleep 1
+    waited=$((waited+1))
+done
+if [ "$waited" -ge "$max_wait" ]; then
+    warning "Impossible d'activer 'mise' dans la session courante après ${max_wait}s; ouvrez un nouveau terminal ou exécutez manuellement: $export_line && $activate_line"
 fi
 
 # Faire confiance au fichier de config pour que 'mise install' puisse s'exécuter non interactif
@@ -297,6 +340,11 @@ fi
 success "Installation terminée !"
 echo ""
 printf '\033[0;36mProchaines étapes:\033[0m\n'
-echo "  1. Ouvrez un nouveau terminal ou: source ~/.zshrc"
+case "$SHELL_NAME" in
+    zsh) rc_hint="source ~/.zshrc (ou ouvrir un nouveau terminal)" ;;
+    bash) rc_hint="source ~/.bashrc (ou ouvrir un nouveau terminal)" ;;
+    *) rc_hint="ouvrez un nouveau terminal ou sourcez votre fichier de démarrage" ;;
+esac
+echo "  1. $rc_hint"
 echo "  2. Lancez le Cockpit: cockpit (ou mise run ui)"
 echo ""
