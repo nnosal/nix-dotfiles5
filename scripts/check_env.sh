@@ -74,6 +74,9 @@ else
   else
     warning "mise introuvable — installez avec: curl https://mise.run | sh"
     info "Après l'installation, ouvrez un nouveau terminal ou sourcez votre fichier de démarrage: $RC_SUGGEST"
+    info "Si l'installation échoue ou si le binaire n'apparaît pas, vous pouvez forcer la réinstallation manuelle via:"
+    echo "  curl -fsSL https://mise.run | sh"
+    echo "Ou laissez le bootstrap créer un wrapper temporaire: ~/.local/bin/mise (il tentera d'installer mise à la demande)."
   fi
 fi
 

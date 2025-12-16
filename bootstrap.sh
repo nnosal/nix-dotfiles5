@@ -240,6 +240,49 @@ while [ "$waited" -lt "$max_wait" ]; do
 done
 if [ "$waited" -ge "$max_wait" ]; then
     warning "Impossible d'activer 'mise' dans la session courante après ${max_wait}s; ouvrez un nouveau terminal ou exécutez manuellement: $export_line && $activate_line"
+
+    # Si le binaire n'existe vraiment pas, créer un wrapper temporaire qui relance l'installeur
+    if [ ! -x "$HOME/.local/bin/mise" ]; then
+        info "Création d'un wrapper temporaire ~/.local/bin/mise pour récupérer l'installateur si nécessaire"
+        mkdir -p "$HOME/.local/bin"
+        cat > "$HOME/.local/bin/mise" <<'EOF'
+#!/usr/bin/env bash
+set -e
+# Wrapper temporaire: si le binaire 'mise' n'est pas présent, ré-exécute l'installeur puis exec
+if command -v mise >/dev/null 2>&1; then
+  exec mise "$@"
+fi
+if [ -x "$HOME/.local/share/mise/shims/mise" ]; then
+  exec "$HOME/.local/share/mise/shims/mise" "$@"
+fi
+# Lancer l'installeur pour tenter de restaurer le binaire
+printf "\033[0;34mℹ️  Tentative d'installation de 'mise' (wrapper)...\033[0m\n"
+if curl -fsSL https://mise.run | sh; then
+  # Rafraîchir PATH
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+  # attendre un peu
+  waited=0
+  while [ $waited -lt 15 ]; do
+    if command -v mise >/dev/null 2>&1; then
+      exec mise "$@"
+    fi
+    sleep 1
+    waited=$((waited+1))
+  done
+fi
+printf "\033[0;31m❌ 'mise' introuvable après tentative d'installation.\033[0m\n" >&2
+exit 2
+EOF
+        chmod +x "$HOME/.local/bin/mise"
+        info "Wrapper créé: ~/.local/bin/mise"
+        # Tenter d'utiliser ce wrapper pour activer/réinstaller les outils
+        export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+        if "$HOME/.local/bin/mise" --version >/dev/null 2>&1; then
+            info "Wrapper mis en place et 'mise' répond"
+        else
+            warning "Le wrapper n'a pas pu activer 'mise' immédiatement. Réessayez: source votre rc (ex: $export_line && $activate_line) ou relancez le bootstrap."
+        fi
+    fi
 fi
 
 # Faire confiance au fichier de config pour que 'mise install' puisse s'exécuter non interactif
