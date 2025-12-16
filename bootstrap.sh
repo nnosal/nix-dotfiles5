@@ -164,8 +164,22 @@ cd "$DOTFILES_DIR"
 if ! command -v mise >/dev/null 2>&1; then
     info "Installation de Mise..."
     curl -fsSL https://mise.run | sh
-    export PATH="$HOME/.local/bin:$PATH"
+    # Export immédiat pour éviter les problèmes de timing
+    export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+    # Attendre que le binaire soit disponible (race condition fix)
+    timeout=15
+    elapsed=0
+    while [ ! -x "$HOME/.local/bin/mise" ] && [ "$elapsed" -lt "$timeout" ]; do
+        sleep 1
+        elapsed=$((elapsed+1))
+    done
+    if [ ! -x "$HOME/.local/bin/mise" ]; then
+        warning "mise installé mais binaire introuvable après ${timeout}s; continuer et tenter l'activation"
+    fi
 fi
+
+# s'assurer que les shims sont dans le PATH
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
 success "Mise installé"
 
@@ -192,11 +206,29 @@ if command -v mise >/dev/null 2>&1; then
 fi
 
 # ============================================
-# INSTALLER LES OUTILS VIA MISE
+# INSTALLER LES OUTILS VIA MISE (retry + doctor)
 # ============================================
 info "Installation des outils (gum, hk, etc.)..."
-if ! mise install; then
-    warning "La commande 'mise install' a échoué — exécutez 'mise install --verbose' pour plus de détails."
+# Essayer jusqu'à 3 fois pour laisser le temps aux shims d'apparaître
+attempts=0
+max_attempts=3
+while [ "$attempts" -lt "$max_attempts" ]; do
+    if mise install --verbose; then
+        # Vérifier l'état général via doctor (retour 0 = OK)
+        if mise doctor --quiet >/dev/null 2>&1; then
+            success "Outils installés et mise OK"
+            break
+        else
+            warning "mise install réussi mais 'mise doctor' signale des problèmes — retry..."
+        fi
+    else
+        warning "La commande 'mise install' a échoué — retry..."
+    fi
+    attempts=$((attempts+1))
+    sleep 2
+done
+if [ "$attempts" -ge "$max_attempts" ]; then
+    warning "mise install échoue encore — exécutez 'mise install --verbose' manuellement pour diagnostiquer"
 fi
 
 # Si 'nh' est toujours absent, tenter une installation via Nix (plus robuste)

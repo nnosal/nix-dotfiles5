@@ -22,11 +22,31 @@ info "Vérification de l'environnement post-bootstrap..."
 if command -v mise >/dev/null 2>&1; then
   ver=$(mise --version 2>/dev/null || true)
   success "mise trouvé${ver:+ — $ver}"
-  # vérifier si mise.toml est trust
-  if mise trust "$HOME/dotfiles/mise.toml" >/dev/null 2>&1; then
+  # vérifier si mise.toml est trust (vérifie plusieurs emplacements possibles)
+  TRUSTED=false
+  for f in "$HOME/dotfiles/mise.toml" "$PWD/mise.toml"; do
+    if [ -f "$f" ]; then
+      if mise trust "$f" >/dev/null 2>&1; then
+        TRUSTED=true
+        break
+      fi
+    fi
+  done
+  # tenter le root git si disponible
+  if ! $TRUSTED && command -v git >/dev/null 2>&1; then
+    if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+      if [ -f "$git_root/mise.toml" ]; then
+        if mise trust "$git_root/mise.toml" >/dev/null 2>&1; then
+          TRUSTED=true
+        fi
+      fi
+    fi
+  fi
+
+  if $TRUSTED; then
     success "Le fichier mise.toml est trusté"
   else
-    warning "Le fichier mise.toml n'est pas trusté — exécutez: mise trust ~/dotfiles/mise.toml"
+    warning "Le fichier mise.toml n'est pas trusté — exécutez: mise trust ~/dotfiles/mise.toml (ou 'mise trust <chemin>')"
   fi
 else
   warning "mise introuvable — installez avec: curl https://mise.run | sh, puis ouvrez un nouveau terminal ou 'source ~/.zshrc'"
@@ -45,18 +65,32 @@ else
   fi
 fi
 
-# Gum
-if command -v gum >/dev/null 2>&1; then
-  success "gum trouvé"
-else
-  warning "gum introuvable — certains prompts interactifs pourraient ne pas fonctionner (installer via 'mise install' ou votre gestionnaire de paquets)"
+# Vérifier un ensemble d'outils courants
+missing_tools=()
+for t in gum hk fzf bat shfmt stylua pkl starship; do
+  if command -v "$t" >/dev/null 2>&1; then
+    success "$t trouvé"
+  else
+    missing_tools+=("$t")
+    warning "$t introuvable"
+  fi
+done
+
+# Si des outils sont manquants et que 'mise' est disponible, tenter une installation automatique
+if [ ${#missing_tools[@]} -gt 0 ] && command -v mise >/dev/null 2>&1; then
+  info "Des outils sont manquants: ${missing_tools[*]}. Tentative d'installation via 'mise install --verbose'..."
+  if mise install --verbose; then
+    info "Relancement du contrôle des outils..."
+    for t in "${missing_tools[@]}"; do
+      if command -v "$t" >/dev/null 2>&1; then
+        success "$t installé"
+      else
+        warning "$t toujours manquant"
+      fi
+    done
+  else
+    warning "'mise install' a échoué — exécutez 'mise install --verbose' manuellement pour diagnostiquer"
+  fi
 fi
 
-# HK
-if command -v hk >/dev/null 2>&1; then
-  success "hk trouvé"
-else
-  warning "hk introuvable — les hooks git peuvent ne pas être installés"
-fi
-
-info "Si des éléments sont manquants, ré-exécutez 'mise install --verbose' ou suivez les conseils affichés ci-dessus."
+info "Si des éléments sont encore manquants, ré-exécutez 'mise install --verbose' ou suivez les conseils affichés ci-dessus."
