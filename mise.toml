@@ -1,6 +1,3 @@
-[meta]
-name = "ultimate-dotfiles"
-
 [tools]
 # Outils indispensables au Cockpit
 gum = "latest"      # UI Interactif
@@ -8,16 +5,39 @@ fzf = "latest"      # Recherche floue
 bat = "latest"      # Cat avec syntax highlight
 hk = "latest"       # Git Hooks manager
 pkl = "latest"      # Config language pour hk
-nh = "latest"       # Nix Helper (Speed up builds & GC)
+# nh est géré séparément : voir la vérification dans `tasks.install`
 stylua = "latest"   # Formatter Lua (Neovim)
 shfmt = "latest"    # Formatter Bash
 starship = "latest" # Prompt moderne
+# Note: `nh` (Nix Helper) n'est pas géré automatiquement par certaines versions de Mise.
+# Sa gestion est faite séparément dans le task `install` ci-dessous (vérification/notice).
 
 [tasks.install]
 description = "Bootstrap initial post-clone"
 run = """
 #!/usr/bin/env bash
 set -e
+# 0. Vérifie si 'nh' est présent (Nix Helper)
+if ! command -v nh &> /dev/null; then
+  if command -v nix &> /dev/null; then
+    echo "ℹ️  nh non trouvé — tentative d'installation via Nix (nix profile install nixpkgs#nh)..."
+    # Tente d'installer nh dans le profile Nix de l'utilisateur
+    if nix profile install nixpkgs#nh; then
+      if command -v nh &> /dev/null; then
+        echo "✅ nh installé"
+      else
+        echo "⚠️  L'installation de 'nh' via Nix a réussi mais n'est pas encore disponible dans le PATH."
+        echo "Vous pouvez relancer votre shell ou exécuter 'nix shell nixpkgs#nh -c nh' temporairement."
+      fi
+    else
+      echo "⚠️  Échec de l'installation de 'nh' via Nix. Vous pouvez exécuter 'nix shell nixpkgs#nh -c nh' ou installer manuellement."
+    fi
+  else
+    echo "⚠️  nh non trouvé et Nix absent — installez 'nh' manuellement (ex: 'nix shell nixpkgs#nh' ou via le README)."
+  fi
+else
+  echo "nh détecté"
+fi
 # 1. Installe les hooks git
 hk install
 # 2. Applique la config Nix initiale

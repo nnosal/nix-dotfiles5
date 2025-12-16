@@ -33,6 +33,23 @@ Infrastructure personnelle **"Ultimate"** unifiée, pilotant le cycle de vie num
 sh <(curl -L https://raw.githubusercontent.com/nnosal/nix-dotfiles5/main/bootstrap.sh)
 ```
 
+> ⚠️ Si `mise install` renvoie une erreur indiquant qu'un outil (ex: `nh`) n'est pas trouvé dans le registre, exécutez `mise install --verbose` pour obtenir plus d'informations.
+
+> Pour `nh` (Nix Helper) : si vous avez Nix installé, installez-le de façon permanente avec :
+>
+> ```bash
+> nix profile install nixpkgs#nh
+> ```
+>
+> Ou utilisez-le temporairement (sans installation permanente) :
+>
+> ```bash
+> nix shell nixpkgs#nh -c nh
+> ```
+>
+> Le `task.install` dans `mise.toml` tentera automatiquement `nix profile install nixpkgs#nh` lors de `mise install` si Nix est présent, et affichera des instructions alternatives en cas d'échec.
+
+
 ### Windows
 
 ```powershell
