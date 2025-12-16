@@ -199,14 +199,23 @@ if ! mise install; then
     warning "La commande 'mise install' a échoué — exécutez 'mise install --verbose' pour plus de détails."
 fi
 
-# Si 'nh' est toujours absent, tenter une installation via Nix
+# Si 'nh' est toujours absent, tenter une installation via Nix (plus robuste)
 if ! command -v nh >/dev/null 2>&1; then
     if command -v nix >/dev/null 2>&1; then
-        info "nh introuvable — tentative d'installation via Nix (nix profile install nixpkgs#nh)..."
-        if nix profile install nixpkgs#nh; then
+        info "nh introuvable — tentative d'installation via Nix (profile install)..."
+        if nix --extra-experimental-features 'nix-command flakes' profile install nixpkgs#nh >/dev/null 2>&1; then
             success "nh installé via Nix"
         else
-            warning "Échec de l'installation de 'nh' via Nix. Vous pouvez utiliser 'nix shell nixpkgs#nh -c nh' en attendant."
+            warning "Installation de 'nh' via Nix profile échouée — création d'un wrapper 'nh' utilisant 'nix shell' (fallback temporaire)."
+            mkdir -p "$HOME/.local/bin"
+            cat > "$HOME/.local/bin/nh" <<'EOF'
+#!/usr/bin/env bash
+# Wrapper temporaire qui invoque nh via nix shell
+exec nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#nh -c nh "$@"
+EOF
+            chmod +x "$HOME/.local/bin/nh"
+            success "Wrapper créé dans ~/.local/bin/nh (utilise 'nix shell nixpkgs#nh -c nh')"
+            info "Pour installer de façon permanente, réessayez: nix --extra-experimental-features 'nix-command flakes' profile install nixpkgs#nh"
         fi
     else
         warning "nh introuvable et Nix absent — installez 'nh' manuellement (ex: 'nix shell nixpkgs#nh')."
