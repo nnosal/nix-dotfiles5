@@ -246,6 +246,13 @@ fi
 # FIN
 # ============================================
 echo ""
+# Vérification finale de l'environnement (diagnostic utile)
+if [ -x "./scripts/check_env.sh" ]; then
+    ./scripts/check_env.sh || true
+else
+    bash ./scripts/check_env.sh || true
+fi
+
 success "Installation terminée !"
 echo ""
 printf '\033[0;36mProchaines étapes:\033[0m\n'
