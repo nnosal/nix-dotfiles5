@@ -114,7 +114,7 @@ if [ "$CI" = "true" ]; then
     if ! command -v nh >/dev/null 2>&1; then
         if command -v nix >/dev/null 2>&1; then
             info "nh introuvable (CI) — tentative d'installation via Nix (nix profile install nixpkgs#nh)..."
-            if nix profile install nixpkgs#nh; then
+            if nix --extra-experimental-features 'nix-command flakes' profile install nixpkgs#nh; then
                 success "nh installé via Nix"
             else
                 warning "Échec de l'installation de 'nh' via Nix. Vous pouvez utiliser 'nix shell nixpkgs#nh -c nh' en attendant."
@@ -122,6 +122,12 @@ if [ "$CI" = "true" ]; then
         else
             warning "nh introuvable et Nix absent en CI — installez 'nh' manuellement."
         fi
+    fi
+
+    # Pour les commandes 'nh' (et 'nix' modernes), activer les features expérimentales si possible
+    if command -v nix >/dev/null 2>&1; then
+        export NIX_CONFIG="experimental-features = nix-command flakes"
+        info "Activé NIX_CONFIG pour permettre les commandes 'nh' et 'nix' modernes"
     fi
 
     ./scripts/cockpit.sh --apply-only
@@ -357,6 +363,11 @@ if command -v gum >/dev/null 2>&1; then
     
     # Appliquer
     info "Application de la configuration..."
+    # Si Nix est présent, activer les features expérimentales pour NH/nix
+    if command -v nix >/dev/null 2>&1; then
+        export NIX_CONFIG="experimental-features = nix-command flakes"
+        info "Export NIX_CONFIG pour permettre les commandes 'nh' et 'nix' modernes"
+    fi
     ./scripts/cockpit.sh --apply-only
 else
     # Mode texte basique
